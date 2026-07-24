@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Where to — Tennis Finder</title>
+<style>
+  :root {
+    --bg: #0f1720; --panel: #17212b; --panel-2: #1e2b38;
+    --text: #e8eef4; --muted: #93a4b5; --line: #2a3a49;
+    --accent: #4ec27a; --accent-2: #3aa4ff; --court: #4ec27a; --sim: #b07bff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); }
+  header { padding: 16px 20px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+  header .tag { color: var(--muted); font-size: 13px; }
+  nav { display: flex; gap: 6px; margin-left: auto; }
+  nav button { background: var(--panel); color: var(--text); border: 1px solid var(--line);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  nav button.active { background: var(--accent); color: #06210f; border-color: var(--accent); font-weight: 600; }
+  main { padding: 18px 20px; max-width: 1100px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .banner { background: #3a2b12; border: 1px solid #6b4e1e; color: #ffd591;
+    padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  input, select, textarea { background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font-size: 14px; font-family: inherit; }
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+  .controls input[type=search] { flex: 1; min-width: 200px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .card h3 { margin: 0 0 6px; font-size: 15.5px; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 999px; margin-right: 6px; }
+  .pill.court { background: rgba(78,194,122,.15); color: var(--court); }
+  .pill.simulator { background: rgba(176,123,255,.15); color: var(--sim); }
+  .pill.indoor { background: rgba(58,164,255,.15); color: var(--accent-2); }
+  .card .meta { color: var(--muted); font-size: 13px; margin: 4px 0; }
+  .card a.book { display: inline-block; margin-top: 8px; color: #06210f; background: var(--accent);
+    padding: 6px 12px; border-radius: 7px; text-decoration: none; font-size: 13px; font-weight: 600; }
+  .card .links { margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .card .links a { color: var(--accent-2); font-size: 12.5px; text-decoration: none; }
+  .empty { color: var(--muted); padding: 30px; text-align: center; }
+  #map, #add-map { width: 100%; height: 480px; border-radius: 12px; border: 1px solid var(--line); }
+  #add-map { height: 320px; }
+  form.add { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  form.add label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); }
+  form.add label.full { grid-column: 1 / -1; }
+  .row-actions { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  button.primary { background: var(--accent); color: #06210f; border: none; padding: 10px 16px;
+    border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
+  button.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .hint { color: var(--muted); font-size: 12.5px; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #06210f; padding: 10px 18px; border-radius: 8px;
+    font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+  @media (max-width: 640px) { form.add { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎾 Where to</h1>
+  <span class="tag">Tennis courts &amp; simulators — where to play, and how to book</span>
+  <nav>
+    <button data-view="find" class="active">Find</button>
+    <button data-view="map">Map</button>
+    <button data-view="add">Add</button>
+  </nav>
+</header>
+
+<main>
+  <div id="load-error" class="banner" style="display:none"></div>
+  <div id="key-warning" class="banner" style="display:none">
+    Google Maps isn't configured yet. Add your API key in <code>config.js</code> to enable the map.
+    The Find list works without it.
+  </div>
+
+  <!-- FIND -->
+  <section id="find" class="view active">
+    <div class="controls">
+      <input type="search" id="search" placeholder="Search name, area, or address…" />
+      <select id="filter-type">
+        <option value="">All types</option>
+        <option value="court">Courts</option>
+        <option value="simulator">Simulators</option>
+      </select>
+      <select id="filter-area"><option value="">All areas</option></select>
+      <label class="hint" style="display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="filter-indoor" style="width:auto" /> Indoor only
+      </label>
+    </div>
+    <div id="cards" class="grid"></div>
+  </section>
+
+  <!-- MAP -->
+  <section id="map-view" class="view">
+    <div id="map"></div>
+  </section>
+
+  <!-- ADD -->
+  <section id="add" class="view">
+    <p class="hint" style="margin-top:0">
+      Fill the form, set the location (type an address and click <b>Locate</b>, or click on the map),
+      then <b>Add to list</b>. Since data lives in <code>places.json</code>, use
+      <b>Download places.json</b> and replace the file in your shared copy so your friend sees it too.
+    </p>
+    <form class="add" id="add-form" onsubmit="return false">
+      <label class="full">Name
+        <input id="f-name" required placeholder="e.g. ABC Tennis Club" />
+      </label>
+      <label>Type
+        <select id="f-type">
+          <option value="court">Court</option>
+          <option value="simulator">Simulator</option>
+        </select>
+      </label>
+      <label>Surface
+        <input id="f-surface" placeholder="hard / clay / synthetic / simulator" />
+      </label>
+      <label>Area / District
+        <input id="f-area" placeholder="e.g. Watthana, Bangkok" />
+      </label>
+      <label style="flex-direction:row;align-items:center;gap:8px;color:var(--text)">
+        <input type="checkbox" id="f-indoor" style="width:auto" /> Indoor
+      </label>
+      <label class="full">Address
+        <input id="f-address" placeholder="Full address" />
+      </label>
+      <label>Booking channel
+        <select id="f-bchannel">
+          <option value="line">LINE</option>
+          <option value="phone">Phone</option>
+          <option value="website">Website</option>
+          <option value="app">App</option>
+          <option value="facebook">Facebook</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <label>Booking link / number
+        <input id="f-bvalue" placeholder="URL or phone number" />
+      </label>
+      <label class="full">Notes
+        <textarea id="f-notes" rows="2" placeholder="Price, hours, tips…"></textarea>
+      </label>
+      <label class="full">Location
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input id="f-lat" placeholder="lat" style="width:120px" />
+          <input id="f-lng" placeholder="lng" style="width:120px" />
+          <button type="button" class="ghost" id="btn-locate">Locate address</button>
+          <span class="hint" id="loc-hint">or click on the map</span>
+        </div>
+      </label>
+      <div class="full"><div id="add-map"></div></div>
+      <div class="row-actions">
+        <button type="button" class="primary" id="btn-add">Add to list</button>
+        <button type="button" class="ghost" id="btn-download">Download places.json</button>
+        <button type="button" class="ghost" id="btn-copy">Copy this entry</button>
+        <span class="hint" id="add-count"></span>
+      </div>
+    </form>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+const CFG = window.TENNIS_FINDER_CONFIG || {};
+const KEY_OK = CFG.googleMapsApiKey && CFG.googleMapsApiKey !== "YOUR_GOOGLE_MAPS_API_KEY";
+let PLACES = [];
+let map, addMap, addMarker, geocoder;
+const markers = [];
+
+/* ---------- data ---------- */
+async function loadData() {
+  try {
+    const res = await fetch("places.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    PLACES = Array.isArray(data.places) ? data.places : [];
+    buildAreaFilter();
+    renderCards();
+  } catch (e) {
+    const b = document.getElementById("load-error");
+    b.style.display = "block";
+    b.innerHTML = "Couldn't load <code>places.json</code> (" + e.message +
+      "). Open this app through a local server, not by double-clicking the file. " +
+      "See the README for the one-line command.";
+  }
+}
+
+/* ---------- find / list ---------- */
+function buildAreaFilter() {
+  const sel = document.getElementById("filter-area");
+  const areas = [...new Set(PLACES.map(p => p.area).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All areas</option>' +
+    areas.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
+}
+
+function currentFilters() {
+  return {
+    q: document.getElementById("search").value.trim().toLowerCase(),
+    type: document.getElementById("filter-type").value,
+    area: document.getElementById("filter-area").value,
+    indoor: document.getElementById("filter-indoor").checked
+  };
+}
+
+function filtered() {
+  const f = currentFilters();
+  return PLACES.filter(p => {
+    if (f.type && p.type !== f.type) return false;
+    if (f.area && p.area !== f.area) return false;
+    if (f.indoor && !p.indoor) return false;
+    if (f.q) {
+      const hay = [p.name, p.area, p.address, p.notes].filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(f.q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderCards() {
+  const list = filtered();
+  const el = document.getElementById("cards");
+  if (!list.length) { el.innerHTML = '<div class="empty">No places match your filters yet.</div>'; return; }
+  el.innerHTML = list.map(cardHtml).join("");
+}
+
+function bookingHref(b) {
+  if (!b || !b.value) return null;
+  if (b.channel === "phone") return "tel:" + b.value.replace(/\s+/g, "");
+  if (/^https?:\/\//i.test(b.value)) return b.value;
+  return b.value;
+}
+
+function mapsUrl(p) {
+  if (p.gmaps) return p.gmaps;
+  if (p.lat && p.lng) return `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+  return null;
+}
+
+function cardHtml(p) {
+  const typeLabel = p.type === "simulator" ? "Simulator" : "Court";
+  const href = bookingHref(p.booking);
+  const bookLabel = (p.booking && p.booking.label) || "Book";
+  const bookText = (p.booking && (p.booking.label || p.booking.channel)) || null;
+  const mapsLink = mapsUrl(p);
+  return `<div class="card">
+    <h3>${esc(p.name)}</h3>
+    <div>
+      <span class="pill ${p.type === 'simulator' ? 'simulator' : 'court'}">${typeLabel}</span>
+      ${p.indoor ? '<span class="pill indoor">Indoor</span>' : ''}
+      ${p.surface ? `<span class="meta" style="display:inline">· ${esc(p.surface)}</span>` : ''}
+    </div>
+    ${p.area ? `<div class="meta">📍 ${esc(p.area)}</div>` : ''}
+    ${p.notes ? `<div class="meta">${esc(p.notes)}</div>` : ''}
+    ${(!href && bookText) ? `<div class="meta">🎟️ ${esc(bookText)}</div>` : ''}
+    ${p.account ? `<div class="meta">👤 Account: ${esc(p.account)}</div>` : ''}
+    <div class="links">
+      ${href ? `<a class="book" href="${esc(href)}" target="_blank" rel="noopener">${esc(bookLabel)}</a>` : ''}
+      ${mapsLink ? `<a href="${esc(mapsLink)}" target="_blank" rel="noopener">Open in Google Maps ↗</a>` : ''}
+    </div>
+  </div>`;
+}
+
+/* ---------- maps ---------- */
+function initMaps() {
+  if (!KEY_OK) { document.getElementById("key-warning").style.display = "block"; return; }
+  geocoder = new google.maps.Geocoder();
+  map = new google.maps.Map(document.getElementById("map"),
+    { center: CFG.defaultCenter, zoom: CFG.defaultZoom, mapId: undefined });
+  renderMarkers();
+
+  addMap = new google.maps.Map(document.getElementById("add-map"),
+    { center: CFG.defaultCenter, zoom: CFG.defaultZoom });
+  addMap.addListener("click", e => setAddLocation(e.latLng.lat(), e.latLng.lng()));
+}
+
+function renderMarkers() {
+  if (!map) return;
+  markers.forEach(m => m.setMap(null));
+  markers.length = 0;
+  const info = new google.maps.InfoWindow();
+  PLACES.forEach(p => {
+    if (typeof p.lat !== "number" || typeof p.lng !== "number") return;
+    const marker = new google.maps.Marker({
+      position: { lat: p.lat, lng: p.lng }, map,
+      title: p.name,
+      icon: pinIcon(p.type === "simulator" ? "#b07bff" : "#4ec27a")
+    });
+    const href = bookingHref(p.booking);
+    marker.addListener("click", () => {
+      const bText = (p.booking && (p.booking.label || p.booking.channel)) || null;
+      const mLink = mapsUrl(p);
+      info.setContent(`<div style="color:#111;min-width:180px">
+        <strong>${esc(p.name)}</strong><br>
+        <span style="color:#555">${esc(p.type === 'simulator' ? 'Simulator' : 'Court')}${p.area ? ' · ' + esc(p.area) : ''}</span><br>
+        ${bText ? `🎟️ ${href ? `<a href="${esc(href)}" target="_blank">${esc(bText)}</a>` : esc(bText)}<br>` : ''}
+        ${p.account ? `👤 Account: ${esc(p.account)}<br>` : ''}
+        ${mLink ? `<a href="${esc(mLink)}" target="_blank">Open in Google Maps ↗</a>` : ''}
+      </div>`);
+      info.open(map, marker);
+    });
+    markers.push(marker);
+  });
+}
+
+function pinIcon(color) {
+  return {
+    path: "M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7z",
+    fillColor: color, fillOpacity: 1, strokeColor: "#0b1a10", strokeWeight: 1,
+    scale: 1.6, anchor: new google.maps.Point(12, 22)
+  };
+}
+
+/* ---------- add ---------- */
+function setAddLocation(lat, lng) {
+  document.getElementById("f-lat").value = lat.toFixed(6);
+  document.getElementById("f-lng").value = lng.toFixed(6);
+  if (!addMap) return;
+  const pos = { lat, lng };
+  if (addMarker) addMarker.setPosition(pos);
+  else addMarker = new google.maps.Marker({ position: pos, map: addMap, draggable: true });
+  addMarker.addListener && addMarker.addListener("dragend", e =>
+    setAddLocation(e.latLng.lat(), e.latLng.lng()));
+  addMap.panTo(pos);
+}
+
+function locateAddress() {
+  const addr = document.getElementById("f-address").value.trim();
+  if (!addr) return toast("Enter an address first");
+  if (!geocoder) return toast("Map/geocoding needs a Google API key");
+  geocoder.geocode({ address: addr }, (results, status) => {
+    if (status === "OK" && results[0]) {
+      const loc = results[0].geometry.location;
+      setAddLocation(loc.lat(), loc.lng());
+      addMap.setZoom(15);
+    } else { toast("Couldn't find that address (" + status + ")"); }
+  });
+}
+
+function slug(s) {
+  return (s || "place").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+}
+
+function buildEntry() {
+  const name = document.getElementById("f-name").value.trim();
+  if (!name) { toast("Name is required"); return null; }
+  const lat = parseFloat(document.getElementById("f-lat").value);
+  const lng = parseFloat(document.getElementById("f-lng").value);
+  const bvalue = document.getElementById("f-bvalue").value.trim();
+  const bchannel = document.getElementById("f-bchannel").value;
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    id: slug(name) + "-" + Math.random().toString(36).slice(2, 6),
+    name,
+    type: document.getElementById("f-type").value,
+    surface: document.getElementById("f-surface").value.trim() || undefined,
+    indoor: document.getElementById("f-indoor").checked,
+    area: document.getElementById("f-area").value.trim() || undefined,
+    address: document.getElementById("f-address").value.trim() || undefined,
+    lat: isNaN(lat) ? undefined : lat,
+    lng: isNaN(lng) ? undefined : lng,
+    booking: bvalue ? {
+      channel: bchannel,
+      label: bchannel === "phone" ? "Call to book" : "Book via " + bchannel,
+      value: bvalue
+    } : undefined,
+    notes: document.getElementById("f-notes").value.trim() || undefined,
+    addedBy: "webapp",
+    addedAt: today
+  };
+}
+
+function addEntry() {
+  const entry = buildEntry();
+  if (!entry) return;
+  PLACES.push(entry);
+  buildAreaFilter();
+  renderCards();
+  renderMarkers();
+  updateAddCount();
+  document.getElementById("add-form").reset();
+  if (addMarker) { addMarker.setMap(null); addMarker = null; }
+  toast("Added — remember to Download places.json to share it");
+}
+
+function downloadJson() {
+  const out = { schemaVersion: 1, updatedAt: new Date().toISOString().slice(0, 10), places: PLACES };
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "places.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function copyEntry() {
+  const entry = buildEntry();
+  if (!entry) return;
+  navigator.clipboard.writeText(JSON.stringify(entry, null, 2))
+    .then(() => toast("Entry JSON copied"))
+    .catch(() => toast("Copy failed — check clipboard permissions"));
+}
+
+function updateAddCount() {
+  document.getElementById("add-count").textContent = PLACES.length + " places in list";
+}
+
+/* ---------- helpers ---------- */
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+/* ---------- nav ---------- */
+function showView(name) {
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+  document.getElementById("find").classList.toggle("active", name === "find");
+  document.getElementById("map-view").classList.toggle("active", name === "map");
+  document.getElementById("add").classList.toggle("active", name === "add");
+  if (map && name === "map") google.maps.event.trigger(map, "resize");
+  if (addMap && name === "add") google.maps.event.trigger(addMap, "resize");
+}
+
+/* ---------- wire up ---------- */
+document.querySelectorAll("nav button").forEach(b =>
+  b.addEventListener("click", () => showView(b.dataset.view)));
+["search", "filter-type", "filter-area"].forEach(id =>
+  document.getElementById(id).addEventListener("input", renderCards));
+document.getElementById("filter-indoor").addEventListener("change", renderCards);
+document.getElementById("btn-locate").addEventListener("click", locateAddress);
+document.getElementById("btn-add").addEventListener("click", addEntry);
+document.getElementById("btn-download").addEventListener("click", downloadJson);
+document.getElementById("btn-copy").addEventListener("click", copyEntry);
+
+// Google Maps calls window.__initMaps after the script loads.
+window.__initMaps = initMaps;
+
+(async function boot() {
+  await loadData();
+  updateAddCount();
+  if (KEY_OK) {
+    const s = document.createElement("script");
+    s.src = "https://maps.googleapis.com/maps/api/js?key=" +
+      encodeURIComponent(CFG.googleMapsApiKey) + "&callback=__initMaps&loading=async";
+    s.async = true;
+    document.head.appendChild(s);
+  } else {
+    document.getElementById("key-warning").style.display = "block";
+  }
+})();
+</script>
+</body>
+</html>
