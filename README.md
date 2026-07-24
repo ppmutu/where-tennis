@@ -6,6 +6,7 @@ A tiny static webapp for you and your friend to find tennis **courts** and
 ## Files
 
 - `index.html` — the whole app (Find / Map / Add tabs)
+- `tokens.css` — design tokens (colour, type, spacing, motion) used by `index.html`
 - `places.json` — the single source of data (edit this to change what everyone sees)
 - `config.js` — your Google Maps API key and default map center
 - `README.md` — this file
