@@ -2,74 +2,454 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#141f17" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Where to" />
 <title>Where to — Tennis Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="tokens.css" />
 <style>
-  :root {
-    --bg: #0f1720; --panel: #17212b; --panel-2: #1e2b38;
-    --text: #e8eef4; --muted: #93a4b5; --line: #2a3a49;
-    --accent: #4ec27a; --accent-2: #3aa4ff; --court: #4ec27a; --sim: #b07bff;
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4
+ * scope: utility app (Find / Map / Add), not a marketing page — no catalog macrostructure forced;
+ *        borrows Index-First voice (Find = the list IS the design) and Map/Diagram voice (Map = single
+ *        spatial surface) per-view, kept in one consistent token system since the user asked to
+ *        preserve the existing three-view structure and restyle only.
+ * genre: playful · theme: custom · vibe: "playful sporty tennis, court-side night energy"
+ * paper: oklch(15% 0.014 112) · accent: oklch(82% 0.19 112)
+ * display: Bricolage Grotesque · body: Geist · outlier: Geist Mono (distance/stat figures only)
+ * axes: dark / geometric-sans / chromatic-other (chartreuse ~112°)
+ * nav: custom segmented view-switcher (app chrome, not marketing nav) · footer: none (utility app)
+ * studied: no · context: user-provided (interview) · v1.0
+ */
+
+html, body { overflow-x: clip; background: var(--color-paper); }
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 400;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--color-accent); color: var(--color-accent-ink); }
+
+a { color: var(--color-accent); }
+
+/* ---------- app bar ---------- */
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+  padding: max(var(--space-md), env(safe-area-inset-top)) var(--space-lg) var(--space-md);
+  padding-left: max(var(--space-lg), env(safe-area-inset-left));
+  padding-right: max(var(--space-lg), env(safe-area-inset-right));
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.brand { display: flex; align-items: center; gap: var(--space-xs); }
+
+.brand__mark {
+  width: 22px; height: 22px; flex: none;
+  border-radius: 50%;
+  background: var(--color-accent);
+  position: relative;
+  overflow: hidden;
+}
+.brand__mark::before,
+.brand__mark::after {
+  content: "";
+  position: absolute;
+  inset: -40% -10%;
+  border: 1.6px solid var(--color-accent-ink);
+  border-radius: 50%;
+  opacity: 0.55;
+}
+.brand__mark::before { transform: rotate(28deg); }
+.brand__mark::after { transform: rotate(-28deg); }
+
+.brand__word {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-lg);
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.brand__tag {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  display: none;
+}
+@media (min-width: 40rem) { .brand__tag { display: block; } }
+
+/* segmented tab-bar */
+.tabbar {
+  position: relative;
+  margin-left: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  min-width: 15.5rem;
+}
+.tabbar::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  width: calc((100% - 6px) / 3);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  transform: translateX(calc(var(--tab-i, 0) * 100%));
+  transition: transform var(--dur-short) var(--ease-out);
+}
+.tabbar button {
+  position: relative;
+  z-index: 1;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--color-ink-2);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 38px;
+  transition: color var(--dur-short) var(--ease-out);
+}
+.tabbar button.active { color: var(--color-accent-ink); }
+.tabbar button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ---------- layout ---------- */
+main {
+  padding: var(--space-lg);
+  padding-bottom: max(var(--space-lg), calc(env(safe-area-inset-bottom) + var(--space-md)));
+  max-width: 68rem;
+  margin: 0 auto;
+}
+.view { display: none; }
+.view.active { display: block; }
+
+/* ---------- banners ---------- */
+.banner {
+  background: color-mix(in oklch, var(--color-warning) 16%, var(--color-paper));
+  border: 1px solid var(--color-warning);
+  color: var(--color-warning);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-input);
+  margin-bottom: var(--space-lg);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.banner code {
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ---------- controls ---------- */
+.controls {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-lg);
+}
+
+input, select, textarea {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border: 1px solid var(--color-rule-2);
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+  border-radius: var(--radius-input);
+  padding: 0 var(--space-sm);
+  height: 44px;
+  font-size: var(--text-base);
+  font-family: inherit;
+  transition: background-color var(--dur-short) var(--ease-out);
+}
+textarea { height: auto; padding-block: var(--space-xs); resize: vertical; min-height: 5.5rem; }
+input::placeholder, textarea::placeholder { color: var(--color-muted); }
+input:hover, select:hover, textarea:hover { background: var(--color-paper-2); }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--color-focus);
+  border-color: var(--color-ink-2);
+}
+
+.controls input[type="search"] { flex: 1; min-width: 12rem; }
+
+.toggle-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 44px;
+  padding-inline: var(--space-sm);
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius-pill);
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.toggle-chip input { width: 18px; height: 18px; accent-color: var(--color-accent); }
+
+/* ---------- card grid ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: var(--space-md);
+}
+
+.card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  padding: var(--space-md);
+  transition: transform var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .card:hover { transform: translateY(-2px); border-color: var(--color-rule-2); }
+}
+
+.card h3 {
+  margin: 0 0 var(--space-xs);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-md);
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+}
+
+.pill {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  margin-right: var(--space-2xs);
+}
+.pill.court      { background: color-mix(in oklch, var(--color-cat-court) 20%, transparent); color: var(--color-cat-court); }
+.pill.simulator  { background: color-mix(in oklch, var(--color-cat-simulator) 22%, transparent); color: var(--color-cat-simulator); }
+.pill.indoor     { background: color-mix(in oklch, var(--color-cat-indoor) 22%, transparent); color: var(--color-cat-indoor); }
+
+.card .meta {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  margin: var(--space-2xs) 0;
+  line-height: 1.5;
+}
+.card .meta .label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  margin-right: var(--space-2xs);
+}
+
+.card .links {
+  margin-top: var(--space-sm);
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.card a.book {
+  display: inline-block;
+  color: var(--color-accent-ink);
+  background: var(--color-accent);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-input);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform var(--dur-micro) var(--ease-out);
+}
+.card a.book:hover { transform: translateY(-1px); }
+.card a.book:active { transform: translateY(0); }
+.card .links a:not(.book) {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-rule-2);
+}
+.card .links a:not(.book):hover { color: var(--color-ink); border-color: var(--color-ink-2); }
+
+a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.empty {
+  color: var(--color-ink-2);
+  padding: var(--space-2xl) var(--space-md);
+  text-align: center;
+  font-size: var(--text-base);
+}
+
+/* ---------- map ---------- */
+#map, #add-map {
+  width: 100%;
+  height: 480px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-rule);
+}
+#add-map { height: 300px; }
+
+/* ---------- add form ---------- */
+.hint {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  max-width: 60ch;
+}
+.hint code {
+  background: var(--color-paper-2);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--color-ink);
+}
+
+form.add {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+form.add label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  font-size: var(--text-sm);
+  color: var(--color-ink-2);
+  min-width: 0;
+}
+form.add label.full { grid-column: 1 / -1; }
+
+.row-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  align-items: center;
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--color-rule);
+}
+
+button.primary, button.ghost {
+  appearance: none;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  height: 44px;
+  padding: 0 var(--space-md);
+  border-radius: var(--radius-input);
+  white-space: nowrap;
+  transition: transform var(--dur-micro) var(--ease-out), background-color var(--dur-short) var(--ease-out);
+}
+button.primary {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  border: 1px solid var(--color-accent);
+}
+button.primary:hover { background: color-mix(in oklch, var(--color-accent) 88%, white); }
+button.primary:active { transform: translateY(1px); }
+button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+button.ghost {
+  background: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--color-rule-2);
+}
+button.ghost:hover { background: var(--color-paper-2); }
+button.ghost:active { transform: translateY(1px); }
+
+.location-row {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.location-row input { width: 8.5rem; }
+
+#add-count {
+  margin-left: auto;
+  font-family: var(--font-outlier);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- toast ---------- */
+.toast {
+  position: fixed;
+  bottom: max(var(--space-lg), calc(env(safe-area-inset-bottom) + var(--space-md)));
+  left: 50%;
+  transform: translate(-50%, calc(var(--space-md) + 4px));
+  background: var(--color-ink);
+  color: var(--color-paper);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  opacity: 0;
+  z-index: var(--z-toast);
+  pointer-events: none;
+  transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
+  max-width: calc(100% - var(--space-lg) * 2);
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 40rem) {
+  form.add { grid-template-columns: 1fr; }
+  .appbar { padding: var(--space-sm) var(--space-md); }
+  main { padding: var(--space-md); }
+  #map { height: 60dvh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg); color: var(--text); }
-  header { padding: 16px 20px; border-bottom: 1px solid var(--line);
-    display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  header h1 { font-size: 18px; margin: 0; font-weight: 650; }
-  header .tag { color: var(--muted); font-size: 13px; }
-  nav { display: flex; gap: 6px; margin-left: auto; }
-  nav button { background: var(--panel); color: var(--text); border: 1px solid var(--line);
-    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-  nav button.active { background: var(--accent); color: #06210f; border-color: var(--accent); font-weight: 600; }
-  main { padding: 18px 20px; max-width: 1100px; margin: 0 auto; }
-  .view { display: none; }
-  .view.active { display: block; }
-  .banner { background: #3a2b12; border: 1px solid #6b4e1e; color: #ffd591;
-    padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
-  .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-  input, select, textarea { background: var(--panel-2); color: var(--text);
-    border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font-size: 14px; font-family: inherit; }
-  input::placeholder, textarea::placeholder { color: var(--muted); }
-  .controls input[type=search] { flex: 1; min-width: 200px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
-  .card h3 { margin: 0 0 6px; font-size: 15.5px; }
-  .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px;
-    border-radius: 999px; margin-right: 6px; }
-  .pill.court { background: rgba(78,194,122,.15); color: var(--court); }
-  .pill.simulator { background: rgba(176,123,255,.15); color: var(--sim); }
-  .pill.indoor { background: rgba(58,164,255,.15); color: var(--accent-2); }
-  .card .meta { color: var(--muted); font-size: 13px; margin: 4px 0; }
-  .card a.book { display: inline-block; margin-top: 8px; color: #06210f; background: var(--accent);
-    padding: 6px 12px; border-radius: 7px; text-decoration: none; font-size: 13px; font-weight: 600; }
-  .card .links { margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
-  .card .links a { color: var(--accent-2); font-size: 12.5px; text-decoration: none; }
-  .empty { color: var(--muted); padding: 30px; text-align: center; }
-  #map, #add-map { width: 100%; height: 480px; border-radius: 12px; border: 1px solid var(--line); }
-  #add-map { height: 320px; }
-  form.add { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  form.add label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); }
-  form.add label.full { grid-column: 1 / -1; }
-  .row-actions { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-  button.primary { background: var(--accent); color: #06210f; border: none; padding: 10px 16px;
-    border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
-  button.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
-    padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-  .hint { color: var(--muted); font-size: 12.5px; }
-  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: var(--accent); color: #06210f; padding: 10px 18px; border-radius: 8px;
-    font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; }
-  .toast.show { opacity: 1; }
-  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
-  @media (max-width: 640px) { form.add { grid-template-columns: 1fr; } }
+}
 </style>
 </head>
 <body>
-<header>
-  <h1>🎾 Where to</h1>
-  <span class="tag">Tennis courts &amp; simulators — where to play, and how to book</span>
-  <nav>
-    <button data-view="find" class="active">Find</button>
+<header class="appbar">
+  <div class="brand">
+    <span class="brand__mark" aria-hidden="true"></span>
+    <span class="brand__word">Where to</span>
+  </div>
+  <span class="brand__tag">Tennis courts &amp; simulators, sorted</span>
+  <nav class="tabbar" style="--tab-i: 0">
+    <button data-view="find" class="active" aria-current="page">Find</button>
     <button data-view="map">Map</button>
     <button data-view="add">Add</button>
   </nav>
@@ -92,8 +472,8 @@
         <option value="simulator">Simulators</option>
       </select>
       <select id="filter-area"><option value="">All areas</option></select>
-      <label class="hint" style="display:flex;align-items:center;gap:6px">
-        <input type="checkbox" id="filter-indoor" style="width:auto" /> Indoor only
+      <label class="toggle-chip">
+        <input type="checkbox" id="filter-indoor" /> Indoor only
       </label>
     </div>
     <div id="cards" class="grid"></div>
@@ -106,10 +486,10 @@
 
   <!-- ADD -->
   <section id="add" class="view">
-    <p class="hint" style="margin-top:0">
+    <p class="hint">
       Fill the form, set the location (type an address and click <b>Locate</b>, or click on the map),
       then <b>Add to list</b>. Since data lives in <code>places.json</code>, use
-      <b>Download places.json</b> and replace the file in your shared copy so your friend sees it too.
+      <b>Download JSON</b> and replace the file in your shared copy so your friend sees it too.
     </p>
     <form class="add" id="add-form" onsubmit="return false">
       <label class="full">Name
@@ -127,8 +507,8 @@
       <label>Area / District
         <input id="f-area" placeholder="e.g. Watthana, Bangkok" />
       </label>
-      <label style="flex-direction:row;align-items:center;gap:8px;color:var(--text)">
-        <input type="checkbox" id="f-indoor" style="width:auto" /> Indoor
+      <label style="flex-direction:row;align-items:center;gap:8px;color:var(--color-ink)">
+        <input type="checkbox" id="f-indoor" style="width:18px;height:18px;accent-color:var(--color-accent)" /> Indoor
       </label>
       <label class="full">Address
         <input id="f-address" placeholder="Full address" />
@@ -150,19 +530,19 @@
         <textarea id="f-notes" rows="2" placeholder="Price, hours, tips…"></textarea>
       </label>
       <label class="full">Location
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <input id="f-lat" placeholder="lat" style="width:120px" />
-          <input id="f-lng" placeholder="lng" style="width:120px" />
+        <div class="location-row">
+          <input id="f-lat" placeholder="lat" />
+          <input id="f-lng" placeholder="lng" />
           <button type="button" class="ghost" id="btn-locate">Locate address</button>
-          <span class="hint" id="loc-hint">or click on the map</span>
+          <span class="hint" id="loc-hint" style="margin:0">or click on the map</span>
         </div>
       </label>
       <div class="full"><div id="add-map"></div></div>
       <div class="row-actions">
         <button type="button" class="primary" id="btn-add">Add to list</button>
-        <button type="button" class="ghost" id="btn-download">Download places.json</button>
-        <button type="button" class="ghost" id="btn-copy">Copy this entry</button>
-        <span class="hint" id="add-count"></span>
+        <button type="button" class="ghost" id="btn-download">Download JSON</button>
+        <button type="button" class="ghost" id="btn-copy">Copy entry</button>
+        <span class="hint" id="add-count" style="margin:0"></span>
       </div>
     </form>
   </section>
@@ -258,15 +638,15 @@ function cardHtml(p) {
     <div>
       <span class="pill ${p.type === 'simulator' ? 'simulator' : 'court'}">${typeLabel}</span>
       ${p.indoor ? '<span class="pill indoor">Indoor</span>' : ''}
-      ${p.surface ? `<span class="meta" style="display:inline">· ${esc(p.surface)}</span>` : ''}
+      ${p.surface ? `<span class="meta" style="display:inline"><span class="label">Surface</span> ${esc(p.surface)}</span>` : ''}
     </div>
-    ${p.area ? `<div class="meta">📍 ${esc(p.area)}</div>` : ''}
+    ${p.area ? `<div class="meta"><span class="label">Area</span> ${esc(p.area)}</div>` : ''}
     ${p.notes ? `<div class="meta">${esc(p.notes)}</div>` : ''}
-    ${(!href && bookText) ? `<div class="meta">🎟️ ${esc(bookText)}</div>` : ''}
-    ${p.account ? `<div class="meta">👤 Account: ${esc(p.account)}</div>` : ''}
+    ${(!href && bookText) ? `<div class="meta"><span class="label">Book via</span> ${esc(bookText)}</div>` : ''}
+    ${p.account ? `<div class="meta"><span class="label">Account</span> ${esc(p.account)}</div>` : ''}
     <div class="links">
       ${href ? `<a class="book" href="${esc(href)}" target="_blank" rel="noopener">${esc(bookLabel)}</a>` : ''}
-      ${mapsLink ? `<a href="${esc(mapsLink)}" target="_blank" rel="noopener">Open in Google Maps ↗</a>` : ''}
+      ${mapsLink ? `<a href="${esc(mapsLink)}" target="_blank" rel="noopener">Open in Maps ↗</a>` : ''}
     </div>
   </div>`;
 }
@@ -275,13 +655,28 @@ function cardHtml(p) {
 function initMaps() {
   if (!KEY_OK) { document.getElementById("key-warning").style.display = "block"; return; }
   geocoder = new google.maps.Geocoder();
-  map = new google.maps.Map(document.getElementById("map"),
-    { center: CFG.defaultCenter, zoom: CFG.defaultZoom, mapId: undefined });
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: CFG.defaultCenter, zoom: CFG.defaultZoom,
+    mapId: undefined, disableDefaultUI: false, styles: darkMapStyle()
+  });
   renderMarkers();
 
-  addMap = new google.maps.Map(document.getElementById("add-map"),
-    { center: CFG.defaultCenter, zoom: CFG.defaultZoom });
+  addMap = new google.maps.Map(document.getElementById("add-map"), {
+    center: CFG.defaultCenter, zoom: CFG.defaultZoom, styles: darkMapStyle()
+  });
   addMap.addListener("click", e => setAddLocation(e.latLng.lat(), e.latLng.lng()));
+}
+
+function darkMapStyle() {
+  return [
+    { elementType: "geometry", stylers: [{ color: "#17231a" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#17231a" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#a9b7ae" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#2a3a2c" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#0f1a13" }] },
+    { featureType: "poi", stylers: [{ visibility: "off" }] },
+    { featureType: "transit", stylers: [{ visibility: "off" }] }
+  ];
 }
 
 function renderMarkers() {
@@ -294,18 +689,18 @@ function renderMarkers() {
     const marker = new google.maps.Marker({
       position: { lat: p.lat, lng: p.lng }, map,
       title: p.name,
-      icon: pinIcon(p.type === "simulator" ? "#b07bff" : "#4ec27a")
+      icon: pinIcon(p.type === "simulator" ? "#b98cff" : "#c4ec4e")
     });
     const href = bookingHref(p.booking);
     marker.addListener("click", () => {
       const bText = (p.booking && (p.booking.label || p.booking.channel)) || null;
       const mLink = mapsUrl(p);
-      info.setContent(`<div style="color:#111;min-width:180px">
+      info.setContent(`<div style="color:#171f18;min-width:180px;font-family:Geist,sans-serif">
         <strong>${esc(p.name)}</strong><br>
         <span style="color:#555">${esc(p.type === 'simulator' ? 'Simulator' : 'Court')}${p.area ? ' · ' + esc(p.area) : ''}</span><br>
-        ${bText ? `🎟️ ${href ? `<a href="${esc(href)}" target="_blank">${esc(bText)}</a>` : esc(bText)}<br>` : ''}
-        ${p.account ? `👤 Account: ${esc(p.account)}<br>` : ''}
-        ${mLink ? `<a href="${esc(mLink)}" target="_blank">Open in Google Maps ↗</a>` : ''}
+        ${bText ? `Book via ${href ? `<a href="${esc(href)}" target="_blank">${esc(bText)}</a>` : esc(bText)}<br>` : ''}
+        ${p.account ? `Account: ${esc(p.account)}<br>` : ''}
+        ${mLink ? `<a href="${esc(mLink)}" target="_blank">Open in Maps ↗</a>` : ''}
       </div>`);
       info.open(map, marker);
     });
@@ -316,7 +711,7 @@ function renderMarkers() {
 function pinIcon(color) {
   return {
     path: "M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7z",
-    fillColor: color, fillOpacity: 1, strokeColor: "#0b1a10", strokeWeight: 1,
+    fillColor: color, fillOpacity: 1, strokeColor: "#0e1710", strokeWeight: 1.5,
     scale: 1.6, anchor: new google.maps.Point(12, 22)
   };
 }
@@ -338,7 +733,13 @@ function locateAddress() {
   const addr = document.getElementById("f-address").value.trim();
   if (!addr) return toast("Enter an address first");
   if (!geocoder) return toast("Map/geocoding needs a Google API key");
+  const btn = document.getElementById("btn-locate");
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Locating…";
   geocoder.geocode({ address: addr }, (results, status) => {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
     if (status === "OK" && results[0]) {
       const loc = results[0].geometry.location;
       setAddLocation(loc.lat(), loc.lng());
@@ -390,7 +791,7 @@ function addEntry() {
   updateAddCount();
   document.getElementById("add-form").reset();
   if (addMarker) { addMarker.setMap(null); addMarker = null; }
-  toast("Added — remember to Download places.json to share it");
+  toast("Added — remember to download the JSON to share it");
 }
 
 function downloadJson() {
@@ -429,8 +830,15 @@ function toast(msg) {
 }
 
 /* ---------- nav ---------- */
+const VIEW_INDEX = { find: 0, map: 1, add: 2 };
 function showView(name) {
-  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+  const tabbar = document.querySelector(".tabbar");
+  tabbar.style.setProperty("--tab-i", VIEW_INDEX[name]);
+  document.querySelectorAll("nav button").forEach(b => {
+    const active = b.dataset.view === name;
+    b.classList.toggle("active", active);
+    if (active) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
   document.getElementById("find").classList.toggle("active", name === "find");
   document.getElementById("map-view").classList.toggle("active", name === "map");
   document.getElementById("add").classList.toggle("active", name === "add");
